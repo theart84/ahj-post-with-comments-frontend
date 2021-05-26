@@ -23,12 +23,14 @@ export default class Feed {
 
   subscribeOnStreams() {
     this.postStream$ = ajax
-      .getJSON('http://localhost:3000/posts/latest')
+      .getJSON('https://ahj-post-with-comments.herokuapp.com/posts/latest')
       .pipe(
         switchMap(async (posts) =>
           Promise.all(
             posts.map(async (post) => {
-              const request = await fetch(`http://localhost:3000/posts/${post.id}/comments/latest`);
+              const request = await fetch(
+                `https://ahj-post-with-comments.herokuapp.com/posts/${post.id}/comments/latest`
+              );
               const response = await request.json();
               return { ...post, comments: response };
             })
