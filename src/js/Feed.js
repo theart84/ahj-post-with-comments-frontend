@@ -1,4 +1,5 @@
-import { switchMap } from 'rxjs/operators';
+import { forkJoin } from 'rxjs';
+import { switchMap, map } from 'rxjs/operators';
 import { ajax } from 'rxjs/ajax';
 import Post from './Post';
 import templateEngine from './TemplateEngine';
@@ -25,35 +26,22 @@ export default class Feed {
     this.postStream$ = ajax
       .getJSON('https://ahj-post-with-comments.herokuapp.com/posts/latest')
       .pipe(
-        switchMap(async (posts) =>
-          Promise.all(
-            posts.map(async (post) => {
-              const request = await fetch(
+        switchMap((posts) => {
+          const postsAndComments = posts.map((post) =>
+            ajax
+              .getJSON(
                 `https://ahj-post-with-comments.herokuapp.com/posts/${post.id}/comments/latest`
-              );
-              const response = await request.json();
-              return { ...post, comments: response };
-            })
-          )
-        )
+              )
+              .pipe(map((comments) => ({ ...post, comments })))
+          );
+          return forkJoin(postsAndComments);
+        })
       )
       .subscribe(
         (posts) => posts.forEach((post) => this.addPost(post)),
         (err) => console.log(err)
       );
   }
-
-  // Вариант подписка в подписке...(плохой вариант:))
-  // subscribeOnStreams() {
-  //   this.postStream$ = ajax.getJSON('http://localhost:3000/posts/latest').subscribe((response) => {
-  //     response.forEach((post) => {
-  //       ajax
-  //         .getJSON(`http://localhost:3000/posts/${post.id}/comments/latest`)
-  //         .pipe(map((data) => ({ ...post, comments: data })))
-  //         .subscribe((post) => this.addPost(post));
-  //     });
-  //   });
-  // }
 
   unSubscribeOnStreams() {
     this.postStream$.unsubscribe();
